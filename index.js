@@ -1,6 +1,7 @@
 const TelegramBot = require("node-telegram-bot-api");
 const { Connection, PublicKey } = require("@solana/web3.js");
 const { TOKEN_PROGRAM_ID } = require("@solana/spl-token");
+const express = require("express");
 
 // Replace with your bot token from BotFather
 const BOT_TOKEN = "7514306274:AAF4fv4o-TjgcrDfUTu8EyZQKB9-1v9FVAc";
@@ -10,13 +11,15 @@ const WALLET_ADDRESS = "decaW6NX7WSmYKUetF6LLsTTo6MxE6aNUJRkSbH4xaH";
 const USDC_TOKEN_ADDRESS = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"; // Mainnet USDC
 
 // Initialize Solana connection
-const connection = new Connection(
-    "https://api.mainnet-beta.solana.com",
-    "confirmed",
-);
+const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+
+// Initialize Express app
+const app = express();
+app.use(express.json());
 
 // Create a bot instance
-const bot = new TelegramBot(BOT_TOKEN, { polling: true });
+const bot = new TelegramBot(BOT_TOKEN);
+const WEBHOOK_URL = `https://<your-render-domain>/bot${BOT_TOKEN}`;
 
 // Function to fetch token balance
 async function getTokenBalance(walletAddress, tokenAddress) {
@@ -24,20 +27,16 @@ async function getTokenBalance(walletAddress, tokenAddress) {
         const wallet = new PublicKey(walletAddress);
         const token = new PublicKey(tokenAddress);
 
-        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-            wallet,
-            {
-                programId: TOKEN_PROGRAM_ID,
-            },
-        );
+        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(wallet, {
+            programId: TOKEN_PROGRAM_ID,
+        });
 
         const tokenAccount = tokenAccounts.value.find(
             (account) => account.account.data.parsed.info.mint === tokenAddress,
         );
 
         if (tokenAccount) {
-            const balance =
-                tokenAccount.account.data.parsed.info.tokenAmount.uiAmount;
+            const balance = tokenAccount.account.data.parsed.info.tokenAmount.uiAmount;
             return balance;
         }
 
@@ -48,56 +47,65 @@ async function getTokenBalance(walletAddress, tokenAddress) {
     }
 }
 
-// Command handler for /start
-bot.onText(/\/start/, (msg) => {
+// Set up webhook for Telegram bot
+bot.setWebHook(WEBHOOK_URL);
+
+// Define endpoint for webhook
+app.post(`/bot${BOT_TOKEN}`, (req, res) => {
+    bot.processUpdate(req.body);
+    res.sendStatus(200);
+});
+
+// Command handlers
+bot.onText(/\/goal/, async (msg) => {
     const chatId = msg.chat.id;
     bot.sendMessage(
         chatId,
-        "Welcome to Solana Balance Checker Bot!\n" +
-            "Use /getbalance to check SOL and USDC balances",
-    );
-});
+        `🚀 *Token Launch \\[December\\] Goal* 🚀  
 
-// Command handler for /getbalance
-bot.onText(/\/getbalance/, async (msg) => {
-    const chatId = msg.chat.id;
+We’re working on something big, but first, we need to hit a goal:  
+👥 *1,000 Members*  
+
+Here’s the deal: when we reach *690 members*, we’ll reveal the meme that started it all\\! Let’s make it happen—spread the word, and be part of the journey to launch the funniest token ever\\! 🎉  
+
+Copy Invite Link: \`https://t\\.me/tokenlaunchDecember\``,
+        { parse_mode: "MarkdownV2" },
+    );
 
     try {
-        // Send loading message
-        const loadingMessage = await bot.sendMessage(
-            chatId,
-            "Fetching balances...",
-        );
+        const usdcBalance = await getTokenBalance(WALLET_ADDRESS, USDC_TOKEN_ADDRESS);
+        const memberCount = await bot.getChatMemberCount(chatId);
 
-        // Fetch USDC balance
-        const usdcBalance = await getTokenBalance(
-            WALLET_ADDRESS,
-            USDC_TOKEN_ADDRESS,
-        );
+        const response = `*Group Goal Progress:*\n👥 *Members:* ${memberCount}/1000 \n
+        💸*Balance:* ${usdcBalance} USDC`;
 
-        // Update message with both balances
-        await bot.editMessageText(
-            `💰 Wallet Balances:\n\n` +
-                `USDC: ${usdcBalance.toFixed(2)} USDC\n\n` +
-                `🔍 Address: ${WALLET_ADDRESS}`,
-            {
-                chat_id: chatId,
-                message_id: loadingMessage.message_id,
-            },
-        );
+        bot.sendMessage(chatId, response, { parse_mode: "Markdown" });
     } catch (error) {
-        console.error("Error:", error);
+        console.error("Error fetching group members:", error);
         bot.sendMessage(
             chatId,
-            "❌ An error occurred while checking the balances.",
+            "An error occurred while fetching group information. Please try again later.",
         );
     }
 });
 
-// Error handler
-bot.on("error", (error) => {
-    console.error("Telegram Bot Error:", error);
+bot.onText(/\/getbalance/, async (msg) => {
+    const chatId = msg.chat.id;
+
+    try {
+        const loadingMessage = await bot.sendMessage(chatId, "Fetching balances...");
+        const usdcBalance = await getTokenBalance(WALLET_ADDRESS, USDC_TOKEN_ADDRESS);
+
+        const targetText = `*Balance:* \`$${usdcBalance.toFixed(2)}\`\n*Wallet Address:* \`decaW6NX7WSmYKUetF6LLsTTo6MxE6aNUJRkSbH4xaH\``;
+        bot.sendMessage(chatId, targetText, { parse_mode: "MarkdownV2" });
+    } catch (error) {
+        console.error("Error:", error);
+        bot.sendMessage(chatId, "❌ An error occurred while checking the balances.");
+    }
 });
 
-// Start message
-console.log("Solana Balance Checker Bot is running...");
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
