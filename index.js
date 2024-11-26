@@ -49,74 +49,56 @@ async function getTokenBalance(walletAddress, tokenAddress) {
 }
 
 // Command handler for /start
-bot.onText(/\/start/, (msg) => {
-    const chatId = msg.chat.id;
-    bot.sendMessage(
-        chatId,
-        "Welcome to Solana Balance Checker Bot!\n" +
-        "Use /getbalance to check SOL and USDC balances\n" +
-        "Use /goal to check project details\n" +
-        "Use /address to get wallet address"
-    );
-});
-
-// Command handler for /goal
 bot.onText(/\/goal/, async (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(
-        chatId,
-        `🚀 Token Launch \\[December\\] Goal 🚀\n\n` +
-        `We're working on something big, but first, we need to hit a goal:\n` +
-        `👥 1,000 Members\n\n` +
-        `Here's the deal: when we reach 690 members, we'll reveal the meme that started it all! ` +
-        `Let's make it happen—spread the word, and be part of the journey to launch the funniest token ever! 🎉\n\n` +
-        `Copy Invite Link: https://t.me/tokenlaunchDecember`,
-        { parse_mode: "MarkdownV2" }
-    );
-});
 
-// Command handler for /address
-bot.onText(/\/address/, (msg) => {
-    const chatId = msg.chat.id;
-    bot.sendMessage(chatId, `Wallet Address: \`${WALLET_ADDRESS}\``, {
-        parse_mode: "MarkdownV2",
-    });
-});
-
-// Command handler for /getbalance
-bot.onText(/\/getbalance/, async (msg) => {
-    const chatId = msg.chat.id;
-    
     try {
-        // Send loading message
-        const loadingMessage = await bot.sendMessage(
-            chatId,
-            "Fetching balances...",
-        );
-        
-        // Fetch USDC balance
         const usdcBalance = await getTokenBalance(
             WALLET_ADDRESS,
-            USDC_TOKEN_ADDRESS,
+            USDC_TOKEN_ADDRESS
         );
-        
-        // Update message with both balances
-        await bot.editMessageText(
-            `💰 Wallet Balances:\n\n` +
-            `USDC: ${usdcBalance.toFixed(2)} USDC\n\n` +
-            `🔍 Address: ${WALLET_ADDRESS}`,
-            {
-                chat_id: chatId,
-                message_id: loadingMessage.message_id,
-            },
-        );
+        const memberCount = await bot.getChatMemberCount(chatId);
+
+        const response = `🚀 *Token Launch \\[December\\] Goal* 🚀\n\n` +
+            `👥 *Members:* ${memberCount}/1000\n` +
+            `💸 *Balance:* \`$${usdcBalance.toFixed(2)}\`\n\n` +
+            `When we hit *690 members*, we'll reveal the meme behind it all\\!\n\n` +
+            `Copy Invite Link: \`https://t\\.me/tokenlaunchDecember\``;
+
+        bot.sendMessage(chatId, response, { parse_mode: "MarkdownV2" });
     } catch (error) {
-        console.error("Error:", error);
-        bot.sendMessage(
-            chatId,
-            "❌ An error occurred while checking the balances.",
-        );
+        console.error("Error fetching group members:", error);
+        bot.sendMessage(chatId, "❌ An error occurred while fetching group details.");
     }
+});
+
+bot.onText(/\/address/, async (msg) => {
+    const chatId = msg.chat.id;
+    const response = `*Wallet Address:* \`decaW6NX7WSmYKUetF6LLsTTo6MxE6aNUJRkSbH4xaH\``;
+    bot.sendMessage(chatId, response, { parse_mode: "MarkdownV2" });
+});
+
+bot.onText(/\/getbalance/, async (msg) => {
+    const chatId = msg.chat.id;
+    try {
+        const usdcBalance = await getTokenBalance(
+            WALLET_ADDRESS,
+            USDC_TOKEN_ADDRESS
+        );
+
+        const response = `💰 *Wallet Balance:* \`$${usdcBalance.toFixed(2)}\`\n` +
+            `📥 *Donate to:* \`decaW6NX7WSmYKUetF6LLsTTo6MxE6aNUJRkSbH4xaH\``;
+
+        bot.sendMessage(chatId, response, { parse_mode: "MarkdownV2" });
+    } catch (error) {
+        console.error("Error fetching balances:", error);
+        bot.sendMessage(chatId, "❌ An error occurred while fetching the balance.");
+    }
+});
+
+// Error handler
+bot.on("error", (error) => {
+    console.error("Telegram Bot Error:", error);
 });
 
 // Error handler
