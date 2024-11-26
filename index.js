@@ -130,6 +130,10 @@ app.post(`/bot${BOT_TOKEN}`, (req, res) => {
     bot.processUpdate(req.body); // Pass the update to Telegram Bot API
     res.sendStatus(200);
 });
+app.get(`/`, (req, res) => {
+    
+    res.json("hi im tg bot ty")
+});
 
 // Start the server
 app.listen(PORT, () => {
