@@ -1,9 +1,11 @@
 const TelegramBot = require("node-telegram-bot-api");
 const { Connection, PublicKey } = require("@solana/web3.js");
 const { TOKEN_PROGRAM_ID } = require("@solana/spl-token");
+const express = require("express");
 
-// Replace with your bot token from BotFather
-const BOT_TOKEN = "7514306274:AAF4fv4o-TjgcrDfUTu8EyZQKB9-1v9FVAc";
+// Load environment variables
+const BOT_TOKEN = "7514306274:AAF4fv4o-TjgcrDfUTu8EyZQKB9-1v9FVAc"; // Set this in Render's environment variables
+const PORT = process.env.PORT || 3000; // Default Render port
 
 // Wallet and token addresses
 const WALLET_ADDRESS = "decaW6NX7WSmYKUetF6LLsTTo6MxE6aNUJRkSbH4xaH";
@@ -15,32 +17,28 @@ const connection = new Connection(
     "confirmed",
 );
 
-// Create a bot instance
+// Initialize Telegram Bot
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
 // Function to fetch token balance
 async function getTokenBalance(walletAddress, tokenAddress) {
     try {
         const wallet = new PublicKey(walletAddress);
-        const token = new PublicKey(tokenAddress);
-
         const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
             wallet,
-            {
-                programId: TOKEN_PROGRAM_ID,
-            },
+            { programId: TOKEN_PROGRAM_ID }
         );
 
         const tokenAccount = tokenAccounts.value.find(
-            (account) => account.account.data.parsed.info.mint === tokenAddress,
+            (account) =>
+                account.account.data.parsed.info.mint === tokenAddress
         );
 
         if (tokenAccount) {
             const balance =
                 tokenAccount.account.data.parsed.info.tokenAmount.uiAmount;
-            return balance;
+            return balance || 0;
         }
-
         return 0;
     } catch (error) {
         console.error("Error fetching token balance:", error);
@@ -48,7 +46,7 @@ async function getTokenBalance(walletAddress, tokenAddress) {
     }
 }
 
-// Command handler for /start
+// Command handlers
 bot.onText(/\/goal/, async (msg) => {
     const chatId = msg.chat.id;
 
@@ -101,10 +99,15 @@ bot.on("error", (error) => {
     console.error("Telegram Bot Error:", error);
 });
 
-// Error handler
-bot.on("error", (error) => {
-    console.error("Telegram Bot Error:", error);
+// Start an Express server
+const app = express();
+
+// Health check endpoint for Render
+app.get("/", (req, res) => {
+    res.send("Solana Balance Checker Bot is running.");
 });
 
-// Start message
-console.log("Solana Balance Checker Bot is running...");
+// Start Express server
+app.listen(PORT, () => {
+    console.log(`Express server running on port ${PORT}`);
+});
