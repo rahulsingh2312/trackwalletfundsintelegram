@@ -76,6 +76,18 @@ bot.onText(/\/address/, async (msg) => {
     bot.sendMessage(chatId, response, { parse_mode: "MarkdownV2" });
 });
 
+bot.onText(/\/social/, async (msg) => {
+    const chatId = msg.chat.id;
+    const response = `Website: theintrovert.club \n`+
+
+`Telegram: https://t.me/theintrovertclub \n`+
+
+`X: https://x.com/introvertedcto \n`+
+
+`Instagram: https://www.instagram.com/the_introvertclub/ \n`;
+    bot.sendMessage(chatId, response, { parse_mode: "MarkdownV2" });
+});
+
 bot.onText(/\/getbalance/, async (msg) => {
     const chatId = msg.chat.id;
     try {
