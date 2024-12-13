@@ -78,14 +78,12 @@ bot.onText(/\/address/, async (msg) => {
 
 bot.onText(/\/social/, async (msg) => {
     const chatId = msg.chat.id;
-    const response = `Website: theintrovert.club \n`+
-
-`Telegram: https://t.me/theintrovertclub \n`+
-
-`X: https://x.com/introvertedcto \n`+
-
-`Instagram: https://www.instagram.com/the_introvertclub/ \n`;
-    bot.sendMessage(chatId, response, { parse_mode: "MarkdownV2" });
+    const response =
+        `Website: <a href="https://theintrovert.club">theintrovert.club</a>\n` +
+        `Telegram: <a href="https://t.me/theintrovertclub">Join Telegram</a>\n` +
+        `X: <a href="https://x.com/introvertedcto">Follow on X</a>\n` +
+        `Instagram: <a href="https://www.instagram.com/the_introvertclub/">Visit Instagram</a>`;
+    bot.sendMessage(chatId, response, { parse_mode: "HTML" });
 });
 
 bot.onText(/\/getbalance/, async (msg) => {
